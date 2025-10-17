@@ -107,7 +107,7 @@ def generate_proposal(client_name, service_needed, client_headline, project_deta
         st.error("Google API Key is missing. Please enter it above.")
         return None
 
-    model = genai.GenerativeModel('gemini-2.5-pro')
+    model = genai.GenerativeModel('gemini-1.5-pro-latest')
 
     prompt = f"""
     You are {MY_NAME}, a professional and empathetic Career Coach with the following headline: "{MY_HEADLINE}".
@@ -144,7 +144,7 @@ def enhance_proposal(proposal_text):
         st.error("Google API Key is missing. Please enter it above.")
         return proposal_text
     
-    model = genai.GenerativeModel('gemini-2.5-pro')
+    model = genai.GenerativeModel('gemini-1.5-pro-latest')
     
     prompt = f"""
     Please review the following client proposal. Enhance it by making it more persuasive, confident, and concise. 
