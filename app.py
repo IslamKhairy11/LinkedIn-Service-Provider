@@ -196,6 +196,7 @@ with col1:
 
 with col2:
     st.header("Step 2: Generate & Refine Proposal")
+    requests_df = load_data()
     if not st.session_state.requests_df.empty:
         # Select a client from the pending requests
         pending_requests = requests_df[requests_df['status'] == 'Pending']
@@ -215,10 +216,10 @@ with col2:
 
             if st.button(f"✨ Generate Proposal for {selected_row['client_name']}"):
                 proposal = generate_proposal(
-                    selected_row["Client Name"],
-                    selected_row["Service Needed"],
-                    selected_row["Client Headline"],
-                    selected_row["Project Details"]
+                    selected_row["client_name"],
+                    selected_row["service_needed"],
+                    selected_row["client_headline"],
+                    selected_row["project_details"]
                 )
                 if proposal:
                     st.session_state.generated_proposal = proposal
@@ -247,7 +248,7 @@ with col2:
 
     with c3:
         if st.button("✅ Mark as 'Contacted'"):
-            if 'selected_client_name' in locals():
+            if 'selected_row' in locals():
                 update_request(
                     record_id=selected_row['id'],
                     name=selected_row['client_name'],
