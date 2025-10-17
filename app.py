@@ -11,7 +11,7 @@ st.set_page_config(
 )
 
 # --- API KEY MANAGEMENT ---
-google_api_key = st.text_input("Enter your Google AI Studio API Key", type="password")
+google_api_key = st.secrets["GOOGLE_API_KEY"]
 if google_api_key:
     try:
         genai.configure(api_key=google_api_key)
