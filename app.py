@@ -134,19 +134,32 @@ def generate_proposal(client_name, service_needed, client_headline, project_deta
         st.info("🤖 Generating proposal with Gemini... please wait.")
         response = model.generate_content(prompt)
         # ✅ Extract text safely
-        if hasattr(response, "text") and response.text:
-            return response.text.strip()
-        elif hasattr(response, "candidates") and response.candidates:
-            parts = response.candidates[0].content.parts
-            if parts and hasattr(parts[0], "text"):
-                return parts[0].text.strip()
-        #return response.text.strip()
-        st.warning("No text returned from Gemini. Check your model or prompt length.")
-        return None
+        if not response.candidates:
+            st.error("Response was blocked. This might be due to safety filters.")
+            if hasattr(response, 'prompt_feedback'):
+                st.error(f"Prompt feedback: {response.prompt_feedback}")
+            return None
+        candidate = response.candidates[0]
+        
+        if not hasattr(candidate, 'content') or not candidate.content.parts:
+            st.error("No content in response.")
+            if hasattr(candidate, 'finish_reason'):
+                st.error(f"Finish reason: {candidate.finish_reason}")
+            return None
+
+        text_content = candidate.content.parts[0].text
+        if text_content:
+            return text_content.strip()
+        else:
+            st.warning("No text returned from Gemini. Check your model or prompt length.")
+            return None
+        
     
     except Exception as e:
         st.error(f"An error occurred with the Google Gemini API: {e}")
         st.info("Common Error: If you see a 'permission denied' or 'API key not valid' error, please ensure you have enabled the 'Generative Language API' in your Google Cloud Project associated with the key.")
+        import traceback
+        st.code(traceback.format_exc())
         return None
 
 def enhance_proposal(proposal_text):
