@@ -200,17 +200,20 @@ with col2:
         # Select a client from the pending requests
         pending_requests = requests_df[requests_df['status'] == 'Pending']
         if not pending_requests.empty:
-            selected_client_name = st.selectbox(
-                "Select a client to generate a proposal for:",
-                options=pending_requests["Client Name"].tolist()
+            pending_requests = pending_requests.copy()
+            pending_requests['display'] = pending_requests['client_name'] + " (" + pending_requests['service_needed'] + ")"
+            
+            selected_display = st.selectbox(
+                "Select a pending client to process:",
+                options=pending_requests["display"].tolist()
             )
             
-            selected_row = pending_requests[pending_requests['display'] == selected_client_name].iloc[0]
+            selected_row = pending_requests[pending_requests['display'] == selected_display].iloc[0]
 
             if 'proposal_text' not in st.session_state:
                 st.session_state.proposal_text = ""
 
-            if st.button(f"🤖 Generate Proposal for {selected_client_name}"):
+            if st.button(f"✨ Generate Proposal for {selected_row['client_name']}"):
                 proposal = generate_proposal(
                     selected_row["Client Name"],
                     selected_row["Service Needed"],
@@ -255,7 +258,7 @@ with col2:
                     proposal=edited_proposal
                 )
                 st.session_state.generated_proposal = "" # Clear proposal
-                st.success(f"Status for {selected_client_name} updated to 'Contacted'.")
+                st.success(f"Status for {selected_row['client_name']} updated to 'Contacted'.")
                 st.rerun()
             else:
                 st.warning("Please select a pending client first.")
