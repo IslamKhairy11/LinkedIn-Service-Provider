@@ -196,8 +196,8 @@ with col1:
 
 with col2:
     st.header("Step 2: Generate & Refine Proposal")
-    requests_df = load_data()
-    if not st.session_state.requests_df.empty:
+    #requests_df = load_data()
+    if not requests_df.empty:
         # Select a client from the pending requests
         pending_requests = requests_df[requests_df['status'] == 'Pending']
         if not pending_requests.empty:
@@ -224,7 +224,7 @@ with col2:
                 if proposal:
                     st.session_state.generated_proposal = proposal
         else:
-            st.info("No pending requests to process.")
+            st.info("✅ All client requests have been processed.")
     else:
         st.info("Add a client request on the left to get started.")
 
