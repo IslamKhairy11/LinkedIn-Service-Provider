@@ -107,7 +107,7 @@ def generate_proposal(client_name, service_needed, client_headline, project_deta
         st.error("Google API Key is missing. Please enter it above.")
         return None
 
-    model = genai.GenerativeModel('gemini-2.5-pro')
+    model = genai.GenerativeModel('gemini-2.0-pro')
 
     prompt = f"""
     You are {MY_NAME}, a professional and empathetic Career Coach with the following headline: "{MY_HEADLINE}".
@@ -133,7 +133,17 @@ def generate_proposal(client_name, service_needed, client_headline, project_deta
     try:
         st.info("🤖 Generating proposal with Gemini... please wait.")
         response = model.generate_content(prompt)
-        return response.text.strip()
+        # ✅ Extract text safely
+        if hasattr(response, "text") and response.text:
+            return response.text.strip()
+        elif hasattr(response, "candidates") and response.candidates:
+            parts = response.candidates[0].content.parts
+            if parts and hasattr(parts[0], "text"):
+                return parts[0].text.strip()
+        #return response.text.strip()
+        st.warning("No text returned from Gemini. Check your model or prompt length.")
+        return None
+    
     except Exception as e:
         st.error(f"An error occurred with the Google Gemini API: {e}")
         st.info("Common Error: If you see a 'permission denied' or 'API key not valid' error, please ensure you have enabled the 'Generative Language API' in your Google Cloud Project associated with the key.")
@@ -144,7 +154,7 @@ def enhance_proposal(proposal_text):
         st.error("Google API Key is missing. Please enter it above.")
         return proposal_text
     
-    model = genai.GenerativeModel('gemini-2.5-pro')
+    model = genai.GenerativeModel('gemini-2.0-pro')
     prompt = f"""
     Please review the following client proposal. Enhance it by making it more persuasive, confident, and concise. 
     Ensure it clearly communicates the value proposition and ends with a strong call to action.
