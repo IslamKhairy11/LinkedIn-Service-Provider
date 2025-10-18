@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import sqlite3
-import google.generativeai as genai 
+import openai
 import os
 
 # --- PAGE CONFIGURATION ---
@@ -66,12 +66,23 @@ def update_request(record_id, name, service, headline, details, status, proposal
 init_db()
 
 # --- API KEY MANAGEMENT ---
-google_api_key = st.secrets["GOOGLE_API_KEY"]
-if google_api_key:
-    try:
-        genai.configure(api_key=google_api_key)
-    except Exception as e:
-        st.error(f"Error configuring Google API: {e}")
+try:
+    api_key = st.secrets["DEEPSEEK_API_KEY"]
+    if not api_key:
+        raise KeyError("API Key is empty.")
+
+    # Configure the OpenAI client to point to DeepSeek's API endpoint
+    client = openai.OpenAI(
+        api_key=api_key,
+        base_url="https://api.deepseek.com/v1"
+    )
+except KeyError:
+    st.error("DeepSeek API Key not found in Streamlit Secrets!")
+    st.info("Please go to your app's settings on Streamlit Cloud and add your DEEPSEEK_API_KEY.")
+    st.stop() # Stop the app if the key is missing
+except Exception as e:
+    st.error(f"Failed to configure the API client. Error: {e}")
+    st.stop()
 
 
 # --- YOUR PROFILE/SERVICE DATA ---
@@ -103,12 +114,7 @@ if 'generated_proposal' not in st.session_state:
 
 # --- LLM PROPOSAL GENERATION FUNCTION ---
 def generate_proposal(client_name, service_needed, client_headline, project_details):
-    if not google_api_key:
-        st.error("Google API Key is missing. Please enter it above.")
-        return None
-
-    model = genai.GenerativeModel('gemini-2.0-flash')
-
+    
     prompt = f"""
     You are {MY_NAME}, a professional and empathetic Career Coach with the following headline: "{MY_HEADLINE}".
     Your experience is: {MY_EXPERIENCE_SUMMARY}
@@ -130,44 +136,25 @@ def generate_proposal(client_name, service_needed, client_headline, project_deta
 
     IMPORTANT: The entire proposal must be concise and professional. Keep the total length under 1500 characters.
     """
-    try:
-        st.info("🤖 Generating proposal with Gemini... please wait.")
-        response = model.generate_content(prompt)
-        # ✅ Extract text safely
-        if not response.candidates:
-            st.error("Response was blocked. This might be due to safety filters.")
-            if hasattr(response, 'prompt_feedback'):
-                st.error(f"Prompt feedback: {response.prompt_feedback}")
-            return None
-        candidate = response.candidates[0]
-        
-        if not hasattr(candidate, 'content') or not candidate.content.parts:
-            st.error("No content in response.")
-            if hasattr(candidate, 'finish_reason'):
-                st.error(f"Finish reason: {candidate.finish_reason}")
-            return None
 
-        text_content = candidate.content.parts[0].text
-        if text_content:
-            return text_content.strip()
-        else:
-            st.warning("No text returned from Gemini. Check your model or prompt length.")
-            return None
-        
-    
+
+    try:
+        st.info("🤖 Generating proposal with DeepSeek... please wait.")
+        response = client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[
+                {"role": "system", "content": "You are a world-class proposal writing assistant for a career coach."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            #max_tokens=500
+        )
+        return response.choices[0].message.content.strip()
     except Exception as e:
-        st.error(f"An error occurred with the Google Gemini API: {e}")
-        st.info("Common Error: If you see a 'permission denied' or 'API key not valid' error, please ensure you have enabled the 'Generative Language API' in your Google Cloud Project associated with the key.")
-        import traceback
-        st.code(traceback.format_exc())
+        st.error(f"An error occurred with the DeepSeek API: {e}")
         return None
 
 def enhance_proposal(proposal_text):
-    if not google_api_key:
-        st.error("Google API Key is missing. Please enter it above.")
-        return proposal_text
-    
-    model = genai.GenerativeModel('gemini-2.0-flash')
     prompt = f"""
     Please review the following client proposal. Enhance it by making it more persuasive, confident, and concise. 
     Ensure it clearly communicates the value proposition and ends with a strong call to action.
@@ -179,9 +166,16 @@ def enhance_proposal(proposal_text):
     ---
     """
     try:
-        st.info("🤖 Enhancing proposal with Gemini...")
-        response = model.generate_content(prompt)
-        return response.text.strip()
+        st.info("🤖 Enhancing proposal with DeepSeek...")
+        response = client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[
+                {"role": "system", "content": "You are an expert copywriter specializing in persuasive sales proposals."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.5
+        )
+        return response.choices[0].message.content.strip()
     except Exception as e:
         st.error(f"An error occurred while enhancing: {e}")
         return proposal_text
