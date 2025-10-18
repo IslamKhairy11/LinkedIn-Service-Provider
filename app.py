@@ -65,7 +65,6 @@ def update_request(record_id, name, service, headline, details, status, proposal
 # Initialize the database on first run
 init_db()
 
-"""
 # --- API KEY MANAGEMENT ---
 google_api_key = st.secrets["GOOGLE_API_KEY"]
 if google_api_key:
@@ -73,44 +72,7 @@ if google_api_key:
         genai.configure(api_key=google_api_key)
     except Exception as e:
         st.error(f"Error configuring Google API: {e}")
-"""
 
-if "api_key" not in st.session_state:
-    st.session_state.api_key = None
-
-# Attempt to load the key from Streamlit secrets only if it's not already in session state.
-if st.session_state.google_api_key is None:
-    try:
-        st.session_state.google_api_key = st.secrets["GOOGLE_API_KEY"]
-        st.toast("API Key loaded from secrets!", icon="🗝️")
-    except (KeyError, FileNotFoundError):
-        # This is not an error, just means we need to ask the user.
-        st.session_state.google_api_key = None
-
-# If we still don't have a key, display the input box.
-# This part of the code will be hidden if the key is successfully loaded from secrets.
-if st.session_state.google_api_key is None:
-    st.header("API Key Required")
-    user_provided_key = st.text_input(
-        "Please enter your Google AI Studio API Key to continue:",
-        type="password",
-        help="You can get your key from https://aistudio.google.com/"
-    )
-    if user_provided_key:
-        st.session_state.agoogle_api_key = user_provided_key
-        # Rerun the app to apply the key and hide the input box.
-        st.rerun()
-    else:
-        # If no key is provided, stop the app from rendering the main components.
-        st.warning("The app cannot function without a Google API Key.")
-        st.stop()
-
-# If we have reached this point, it means a key is available. Configure the API.
-try:
-    genai.configure(api_key=st.session_state.google_api_key)
-except Exception as e:
-    st.error(f"Failed to configure Google API. The provided key may be invalid. Error: {e}")
-    st.stop()
 
 # --- YOUR PROFILE/SERVICE DATA ---
 # This data will be fed to the LLM to customize the proposal
@@ -141,6 +103,10 @@ if 'generated_proposal' not in st.session_state:
 
 # --- LLM PROPOSAL GENERATION FUNCTION ---
 def generate_proposal(client_name, service_needed, client_headline, project_details):
+    if not google_api_key:
+        st.error("Google API Key is missing. Please enter it above.")
+        return None
+
     model = genai.GenerativeModel('gemini-2.0-flash')
 
     prompt = f"""
@@ -197,6 +163,10 @@ def generate_proposal(client_name, service_needed, client_headline, project_deta
         return None
 
 def enhance_proposal(proposal_text):
+    if not google_api_key:
+        st.error("Google API Key is missing. Please enter it above.")
+        return proposal_text
+    
     model = genai.GenerativeModel('gemini-2.0-flash')
     prompt = f"""
     Please review the following client proposal. Enhance it by making it more persuasive, confident, and concise. 
